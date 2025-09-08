@@ -1,0 +1,98 @@
+# Python caches
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment and secrets
+.env
+.env.*
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Project data (root)
+/data/**
+!/data/.gitkeep
+
+# App data (if used)
+/app/data/**
+!/app/data/.gitkeep
+
+# Feedback logs (root-level optional)
+/feedback/**
+!/feedback/.gitkeep
+
+# Evaluation outputs
+/evaluation_results/**
+
+# Model training outputs and checkpoints
+*.pkl
+*.joblib
+*.model
+*.bin
+*_checkpoint*
+model_weights/
+checkpoints/
+
+# Content embeddings and indices
+embeddings/
+indices/
+*.annoy
+id2idx.json
+idx2id.json
+*_embeddings.npy
+*_index.*
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.cache/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS-specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+tmp/
+logs/
+
+# Frontend build/cache
+app/frontend/node_modules/
+app/frontend/dist/
+app/frontend/.vite/
+app/frontend/build/
+
+# Documentation build
+docs/_build/
+docs/.doctrees/
+
+# Distribution/packaging
+build/
+dist/
+*.egg-info/
+.eggs/
