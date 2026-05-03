@@ -1,0 +1,4 @@
+freebase_id remap_id
+DIRECTED_BY 0
+HAS_GENRE 1
+STARRED_BY 2

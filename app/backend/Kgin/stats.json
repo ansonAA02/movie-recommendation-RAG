@@ -1,0 +1,14 @@
+{
+  "num_train_users": 6035,
+  "num_valid_users": 6035,
+  "num_items": 3529,
+  "num_entities": 10619,
+  "num_relations": 3,
+  "num_kg_triples": 20183,
+  "relation_counts": {
+    "HAS_GENRE": 5965,
+    "DIRECTED_BY": 3502,
+    "STARRED_BY": 10716
+  },
+  "include_similar_to": false
+}

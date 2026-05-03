@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./app/backend
+    container_name: fyp-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/backend:/app
+      - /app/__pycache__
+    env_file:
+      - ./app/backend/.env
+    environment:
+      # 英文註解: Set the host for the backend to be accessible
+      - HOST=0.0.0.0
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./app/frontend
+    container_name: fyp-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
