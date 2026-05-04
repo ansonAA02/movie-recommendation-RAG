@@ -8,7 +8,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 # 英文註解: Install the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Add default timeout to avoid network interruption issues
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 # 英文註解: Copy the rest of the application code into the container
 COPY . .
