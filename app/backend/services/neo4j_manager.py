@@ -164,14 +164,18 @@ class Neo4jManager:
         
         try:
             with self.driver.session() as session:
-                # 節點統計
-                node_stats = session.run("""
-                    CALL apoc.meta.stats() YIELD labels, relTypes
-                    RETURN labels, relTypes
-                """).single()
+                node_stats = None
+                try:
+                    # English comment: Prefer APOC stats when the plugin is available.
+                    node_stats = session.run("""
+                        CALL apoc.meta.stats() YIELD labels, relTypes
+                        RETURN labels, relTypes
+                    """).single()
+                except Exception as apoc_error:
+                    logger.warning(f"APOC stats unavailable, falling back to manual counts: {apoc_error}")
                 
                 if not node_stats:
-                    # 如果 APOC 不可用，使用基本查詢
+                    # English comment: Fall back to plain Cypher counts when APOC is not installed.
                     movie_count = session.run("MATCH (m:Movie) RETURN count(m) as count").single()['count']
                     user_count = session.run("MATCH (u:User) RETURN count(u) as count").single()['count']
                     genre_count = session.run("MATCH (g:Genre) RETURN count(g) as count").single()['count']

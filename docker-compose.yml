@@ -11,8 +11,15 @@ services:
     env_file:
       - ./app/backend/.env
     environment:
-      # 英文註解: Set the host for the backend to be accessible
+      # English comment: Keep the backend reachable from the host machine.
       - HOST=0.0.0.0
+      # English comment: Override localhost so the backend uses the Neo4j container.
+      - NEO4J_URI=bolt://neo4j:7687
+      # English comment: Keep Neo4j credentials aligned with the compose service.
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=12345678
+    depends_on:
+      - neo4j
     restart: unless-stopped
 
   frontend:
@@ -20,7 +27,26 @@ services:
       context: ./app/frontend
     container_name: fyp-frontend
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
     restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: fyp-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      # English comment: Set the default database credentials for local Docker runs.
+      - NEO4J_AUTH=neo4j/12345678
+    volumes:
+      # English comment: Persist graph data across container restarts.
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

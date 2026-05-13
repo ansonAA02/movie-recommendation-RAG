@@ -5,6 +5,7 @@ neo4j
 python-jose[cryptography]
 passlib[bcrypt]
 pydantic
+email-validator
 python-dotenv
 requests
 openai
