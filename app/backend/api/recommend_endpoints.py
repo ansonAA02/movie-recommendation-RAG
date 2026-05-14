@@ -18,6 +18,15 @@ from models import Movie, Rating, ViewHistory, Genre
 from auth import verify_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+import sys
+import os
+
+# 確保可以匯入 services 模組
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 from services.neo4j_manager import Neo4jManager
 from services.k_ragrec_complete import get_k_ragrec_recommender
 from schemas import RecommendationResponse, RecommendationItem
