@@ -17,6 +17,15 @@ import math
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+import sys
+import os
+
+# 確保可以匯入 models 模組
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 from database import get_db
 from models import User, Movie, ViewHistory, Rating, Genre, Like, Favorite, Comment
 from services.pure_ollama_client import get_pure_ollama_client

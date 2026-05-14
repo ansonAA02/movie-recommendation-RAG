@@ -11,6 +11,15 @@ import time
 import asyncio
 from typing import Dict, List, Any, Optional, Mapping
 
+import sys
+import os
+
+# 確保可以匯入 services 模組
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 TASK_TIMEOUTS_S = {
     "planner": 12,
     "rule_extraction": 10,

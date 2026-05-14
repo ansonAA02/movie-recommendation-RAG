@@ -10,13 +10,16 @@ import sys
 import os
 from datetime import datetime
 
-# 調整匯入路徑，確保可以從 backend 根目錄執行此腳本
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))   # app/backend/services
-BACKEND_DIR = os.path.dirname(CURRENT_DIR)                 # app/backend
+import sys
+import os
+
+# 確保可以匯入 services 模組
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
-from services.neo4j_manager import Neo4jManager  # type: ignore
+from neo4j_manager import Neo4jManager
 
 # 配置日誌
 logging.basicConfig(
