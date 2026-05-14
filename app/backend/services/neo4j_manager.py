@@ -21,7 +21,34 @@ from typing import Dict, List, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    # 簡單的進度條替代方案，如果沒有 tqdm 的話
+    class tqdm:
+        def __init__(self, iterable=None, total=None, desc=None, *args, **kwargs):
+            self.iterable = iterable
+            self.total = total or (len(iterable) if iterable else 0)
+            self.desc = desc or ""
+            self.n = 0
+            
+        def __iter__(self):
+            for obj in self.iterable:
+                yield obj
+                self.update(1)
+                
+        def update(self, n=1):
+            self.n += n
+            
+        def set_postfix(self, *args, **kwargs):
+            pass
+            
+        def __enter__(self):
+            return self
+            
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
 
 # 調整匯入路徑，讓可以從 backend 根目錄匯入 database/models
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))   # app/backend/services
@@ -74,7 +101,7 @@ def _resolve_neo4j_username(explicit_user: Optional[str] = None) -> str:
     return explicit_user or os.getenv("NEO4J_USERNAME") or os.getenv("NEO4J_USER", "neo4j")
 
 
-
+class Neo4jManager:
     """Neo4j 數據庫管理器 - 整合了所有 Neo4j 操作功能"""
     
     def __init__(self, uri: str = None, user: str = None, password: str = None):
