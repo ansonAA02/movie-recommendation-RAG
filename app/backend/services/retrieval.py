@@ -46,7 +46,7 @@ GNN_EMB_PATH = _resolve_backend_path(os.getenv("GNN_EMB_PATH"), "embeddings", "e
 GNN_ID_LIST_PATH = _resolve_backend_path(os.getenv("GNN_ID_LIST_PATH"), "embeddings", "embeddings1", "movie_subgraph_id_map.json")
 
 NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USER = os.getenv("NEO4J_USER")
+NEO4J_USER = os.getenv("NEO4J_USERNAME") or os.getenv("NEO4J_USER")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 def _env_float(name: str, default: float) -> float:

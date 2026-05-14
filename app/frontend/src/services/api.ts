@@ -1,9 +1,15 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
+// English comment: Resolve the API base URL from Vite env for production deployments.
+const resolveApiBaseUrl = () => {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+  return configuredBaseUrl || 'http://localhost:8000/api'
+}
+
 // 创建axios实例
 export const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: resolveApiBaseUrl(),
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',

@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, text
+from sqlalchemy import or_, text, inspect
 from sqlalchemy.exc import OperationalError as SAOperationalError
 import uvicorn
 import json
@@ -32,7 +32,13 @@ from services.statistics_updater import statistics_updater
 Base.metadata.create_all(bind=engine)
 
 
+def _is_sqlite_database() -> bool:
+    """Return whether the current SQLAlchemy engine points to SQLite."""
+    return engine.dialect.name == "sqlite"
+
+
 def _ensure_user_profile_columns() -> None:
+    """Backfill newly added profile columns for existing databases."""
     required_columns = {
         "genre_distribution_json": "TEXT",
         "director_distribution_json": "TEXT",
@@ -41,9 +47,12 @@ def _ensure_user_profile_columns() -> None:
         "preference_drift_score": "FLOAT DEFAULT 0.0",
     }
     try:
+        inspector = inspect(engine)
+        if "user_profiles" not in inspector.get_table_names():
+            return
+
         with engine.begin() as conn:
-            rows = conn.execute(text("PRAGMA table_info(user_profiles)")).fetchall()
-            existing = {str(r[1]) for r in rows}
+            existing = {str(column["name"]) for column in inspector.get_columns("user_profiles")}
             for col_name, col_type in required_columns.items():
                 if col_name in existing:
                     continue
@@ -66,8 +75,16 @@ def safe_json_loads(json_str):
         return []
 
 
-def commit_with_sqlite_retry(db: Session, retries: int = 5, base_sleep_seconds: float = 0.2) -> None:
-    """Commit with retry for transient SQLite 'database is locked' errors."""
+def commit_with_retry(db: Session, retries: int = 5, base_sleep_seconds: float = 0.2) -> None:
+    """Commit safely across SQLite and production databases."""
+    if not _is_sqlite_database():
+        try:
+            db.commit()
+            return
+        except Exception:
+            db.rollback()
+            raise
+
     for attempt in range(retries):
         try:
             db.commit()
@@ -86,6 +103,23 @@ def commit_with_sqlite_retry(db: Session, retries: int = 5, base_sleep_seconds: 
         except Exception:
             db.rollback()
             raise
+
+
+def _get_cors_origins() -> list[str]:
+    """Resolve allowed CORS origins from environment with local defaults."""
+    default_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:8080",
+    ]
+    configured_origins = os.getenv("CORS_ORIGINS", "")
+    extra_origins = [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+    return list(dict.fromkeys(default_origins + extra_origins))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -108,17 +142,7 @@ app = FastAPI(
 # CORS配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:8080",
-        
-    ],
+    allow_origins=_get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -250,7 +274,7 @@ async def update_current_user_info(
     for field, value in update_data.items():
         setattr(current_user, field, value)
 
-    commit_with_sqlite_retry(db)
+    commit_with_retry(db)
     db.refresh(current_user)
 
     return UserResponse(
@@ -541,18 +565,8 @@ async def toggle_favorite(
         # 收藏時增加觀看次數
         movie.view_count = (movie.view_count or 0) + 1
     
-    # 先提交收藏操作（加重試處理避免 sqlite locked）
-    import time, sqlite3
-    for _ in range(5):
-        try:
-            db.commit()
-            break
-        except Exception as e:
-            # 僅對 sqlite locked 做簡單退避重試
-            if isinstance(e, sqlite3.OperationalError) and "database is locked" in str(e):
-                time.sleep(0.2)
-                continue
-            raise
+    # English comment: Use the shared commit helper so production databases use normal commits.
+    commit_with_retry(db)
     
     # 使用統一的統計更新器更新電影和用戶統計
     from services.statistics_updater import statistics_updater
@@ -617,17 +631,8 @@ async def toggle_like(
         message = "Liked"
         is_liked = True
     
-    # 先提交點贊操作（加重試處理避免 sqlite locked）
-    import time, sqlite3
-    for _ in range(5):
-        try:
-            db.commit()
-            break
-        except Exception as e:
-            if isinstance(e, sqlite3.OperationalError) and "database is locked" in str(e):
-                time.sleep(0.2)
-                continue
-            raise
+    # English comment: Use the shared commit helper so production databases use normal commits.
+    commit_with_retry(db)
     
     # 使用統一的統計更新器更新電影和用戶統計
     statistics_updater.update_related_statistics(db, current_user.id, movie_id)
@@ -775,7 +780,7 @@ async def update_user_profile(
             setup_skipped=False
         )
         db.add(profile)
-        commit_with_sqlite_retry(db)
+        commit_with_retry(db)
         db.refresh(profile)
     
     # Update profile fields
@@ -801,7 +806,7 @@ async def update_user_profile(
         else:
             setattr(profile, field, value)
     
-    commit_with_sqlite_retry(db)
+    commit_with_retry(db)
     db.refresh(profile)
     
     # Convert back to response format
@@ -859,7 +864,7 @@ async def update_preferences(
         else:
             setattr(profile, field, value)
     
-    commit_with_sqlite_retry(db)
+    commit_with_retry(db)
     db.refresh(profile)
     
     # Convert back to response format

@@ -33,7 +33,7 @@ security = HTTPBearer()
 
 # Create a global neo4j manager (soft failure if driver missing)
 NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_USER = os.getenv("NEO4J_USERNAME") or os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "12345678")
 neo4j_manager = Neo4jManager(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
 try:
@@ -813,5 +813,4 @@ def get_user_context(
             "should_retrieve_kg": False,
             "note": f"Error analyzing context: {str(e)}"
         }
-
 

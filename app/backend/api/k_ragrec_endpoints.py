@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/k-ragrec", tags=["K-RAGRec"])
 
 # Create a global neo4j manager
 NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_USER = os.getenv("NEO4J_USERNAME") or os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "12345678")
 neo4j_manager = Neo4jManager(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
 
@@ -106,5 +106,4 @@ async def k_ragrec_recommend(req: RecommendRequest, db: Session = Depends(get_db
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"K-RAGRec recommendation failed: {exc}"
         )
-
 

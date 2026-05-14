@@ -68,12 +68,18 @@ def _json_safe(value):
             return str(value)
     return value
 
-class Neo4jManager:
+
+def _resolve_neo4j_username(explicit_user: Optional[str] = None) -> str:
+    """Resolve the Neo4j username across local and Aura-style env names."""
+    return explicit_user or os.getenv("NEO4J_USERNAME") or os.getenv("NEO4J_USER", "neo4j")
+
+
+
     """Neo4j 數據庫管理器 - 整合了所有 Neo4j 操作功能"""
     
     def __init__(self, uri: str = None, user: str = None, password: str = None):
         self.neo4j_uri = uri or os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687")
-        self.neo4j_user = user or os.getenv("NEO4J_USER", "neo4j")
+        self.neo4j_user = _resolve_neo4j_username(user)
         self.neo4j_password = password or os.getenv("NEO4J_PASSWORD", "12345678")
         self.driver = None
         self.last_sync_time = None

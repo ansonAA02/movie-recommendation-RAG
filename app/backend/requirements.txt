@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 sqlalchemy
+psycopg[binary]
 neo4j
 python-jose[cryptography]
 passlib[bcrypt]
