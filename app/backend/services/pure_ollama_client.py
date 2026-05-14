@@ -278,7 +278,7 @@ class PureOllamaClient:
     
     def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None):
         # Initialize DeepSeek API
-        self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY", "")
+        self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY", "dummy-api-key")
         self.base_url = "https://api.deepseek.com"
         # Initialize the OpenAI client for DeepSeek API
         try:
