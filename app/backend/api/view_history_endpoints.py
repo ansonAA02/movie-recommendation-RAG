@@ -11,6 +11,15 @@ from sqlalchemy import desc, and_, func
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 
+import sys
+import os
+
+# 確保可以匯入 models 模組
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 from database import get_db
 from models import ViewHistory, User, Movie, Rating, Comment, Favorite, Like
 from auth import get_current_user
