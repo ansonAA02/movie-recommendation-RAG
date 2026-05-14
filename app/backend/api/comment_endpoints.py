@@ -164,7 +164,7 @@ async def get_movie_comments(
     movie_id: int,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
-    sort_by: str = Query("newest", regex="^(newest|oldest|rating)$"),
+    sort_by: str = Query("newest", pattern="^(newest|oldest|rating)$"),
     db: Session = Depends(get_db)
 ):
     """
