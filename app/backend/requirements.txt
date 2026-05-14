@@ -16,7 +16,7 @@ numpy
 pandas
 sentence-transformers
 recbole
-torch
+torch --index-url https://download.pytorch.org/whl/cpu
 torch-geometric
 tqdm
 matplotlib

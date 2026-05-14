@@ -9,7 +9,9 @@ COPY requirements.txt .
 
 # 英文註解: Install the dependencies
 # Add default timeout to avoid network interruption issues
+# Pre-install torch cpu to avoid huge CUDA downloads
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --default-timeout=1000 --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 # 英文註解: Copy the rest of the application code into the container
