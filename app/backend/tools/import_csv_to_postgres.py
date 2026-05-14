@@ -38,28 +38,51 @@ def read_csv(path):
             yield {k: (v if v is not None else "") for k, v in row.items()}
 
 # 英文註解: Bulk insert mapped dictionaries for performance
-def chunked_insert(db, model, data, chunk_size=200):
+def chunked_insert(db_factory, model, data, chunk_size=100):
     chunk = []
     for row in data:
         chunk.append(row)
         if len(chunk) >= chunk_size:
-            # 英文註解: Open a new transaction for each chunk to prevent long-running transaction drops
+            success = False
+            retries = 3
+            while not success and retries > 0:
+                db = db_factory()
+                try:
+                    db.bulk_insert_mappings(model, chunk)
+                    db.commit()
+                    success = True
+                except Exception as e:
+                    db.rollback()
+                    print(f"Retrying chunk insert due to error: {e}")
+                    import time
+                    time.sleep(2)
+                    retries -= 1
+                finally:
+                    db.close()
+            if not success:
+                raise Exception("Failed to insert chunk after retries.")
+            chunk = []
+            import time
+            time.sleep(0.3)
+    if chunk:
+        success = False
+        retries = 3
+        while not success and retries > 0:
+            db = db_factory()
             try:
                 db.bulk_insert_mappings(model, chunk)
                 db.commit()
+                success = True
             except Exception as e:
                 db.rollback()
-                raise e
-            chunk = []
-            import time
-            time.sleep(0.3) # 英文註解: longer pause to prevent connection drop
-    if chunk:
-        try:
-            db.bulk_insert_mappings(model, chunk)
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise e
+                print(f"Retrying final chunk insert due to error: {e}")
+                import time
+                time.sleep(2)
+                retries -= 1
+            finally:
+                db.close()
+        if not success:
+            raise Exception("Failed to insert final chunk after retries.")
 
 def main():
     csv_dir = os.path.join(PROJECT_ROOT, "data", "DataCSV")
@@ -101,14 +124,14 @@ def main():
                     "gender": r.get("gender"),
                     "occupation": r.get("occupation")
                 })
-            chunked_insert(db, User, data)
+            chunked_insert(SessionLocal, User, data)
 
         # 英文註解: Import Genres
         path = os.path.join(csv_dir, "genres.csv")
         if os.path.exists(path):
             print(f"Importing {path}...")
             data = [{"id": to_int(r.get("id")), "name": (r.get("name") or "")[:50]} for r in read_csv(path)]
-            chunked_insert(db, Genre, data)
+            chunked_insert(SessionLocal, Genre, data)
 
         # 英文註解: Import Movies
         path = os.path.join(csv_dir, "movies.csv")
@@ -136,7 +159,7 @@ def main():
                     "favorite_count": to_int(r.get("favorite_count")) or 0,
                     "comment_count": to_int(r.get("comment_count")) or 0
                 })
-            chunked_insert(db, Movie, data)
+            chunked_insert(SessionLocal, Movie, data)
 
         # 英文註解: Import Movie Genres (Association Table)
         path = os.path.join(csv_dir, "movie_genre.csv")
@@ -152,23 +175,47 @@ def main():
             chunk = []
             for row in data:
                 chunk.append(row)
-                if len(chunk) >= 200:
-                    try:
-                        db.execute(movie_genre_association.insert(), chunk)
-                        db.commit()
-                    except Exception as e:
-                        db.rollback()
-                        raise e
+                if len(chunk) >= 100:
+                    success = False
+                    retries = 3
+                    while not success and retries > 0:
+                        db_conn = SessionLocal()
+                        try:
+                            db_conn.execute(movie_genre_association.insert(), chunk)
+                            db_conn.commit()
+                            success = True
+                        except Exception as e:
+                            db_conn.rollback()
+                            print(f"Retrying movie_genre chunk due to error: {e}")
+                            import time
+                            time.sleep(2)
+                            retries -= 1
+                        finally:
+                            db_conn.close()
+                    if not success:
+                        raise Exception("Failed to insert movie_genre chunk after retries")
                     chunk = []
                     import time
                     time.sleep(0.3)
             if chunk:
-                try:
-                    db.execute(movie_genre_association.insert(), chunk)
-                    db.commit()
-                except Exception as e:
-                    db.rollback()
-                    raise e
+                success = False
+                retries = 3
+                while not success and retries > 0:
+                    db_conn = SessionLocal()
+                    try:
+                        db_conn.execute(movie_genre_association.insert(), chunk)
+                        db_conn.commit()
+                        success = True
+                    except Exception as e:
+                        db_conn.rollback()
+                        print(f"Retrying final movie_genre chunk due to error: {e}")
+                        import time
+                        time.sleep(2)
+                        retries -= 1
+                    finally:
+                        db_conn.close()
+                if not success:
+                    raise Exception("Failed to insert final movie_genre chunk after retries")
 
         # 英文註解: Import Ratings
         path = os.path.join(csv_dir, "ratings.csv")
@@ -182,21 +229,21 @@ def main():
                     "movie_id": to_int(r.get("movie_id")),
                     "rating": to_float(r.get("rating"))
                 })
-            chunked_insert(db, Rating, data)
+            chunked_insert(SessionLocal, Rating, data)
 
         # 英文註解: Import Favorites
         path = os.path.join(csv_dir, "favorites.csv")
         if os.path.exists(path):
             print(f"Importing {path}...")
             data = [{"id": to_int(r.get("id")), "user_id": to_int(r.get("user_id")), "movie_id": to_int(r.get("movie_id"))} for r in read_csv(path)]
-            chunked_insert(db, Favorite, data)
+            chunked_insert(SessionLocal, Favorite, data)
 
         # 英文註解: Import Likes
         path = os.path.join(csv_dir, "likes.csv")
         if os.path.exists(path):
             print(f"Importing {path}...")
             data = [{"id": to_int(r.get("id")), "user_id": to_int(r.get("user_id")), "movie_id": to_int(r.get("movie_id"))} for r in read_csv(path)]
-            chunked_insert(db, Like, data)
+            chunked_insert(SessionLocal, Like, data)
             
         # 英文註解: Import Comments
         path = os.path.join(csv_dir, "comments.csv")
@@ -211,7 +258,7 @@ def main():
                     "content": r.get("content", ""),
                     "rating": to_float(r.get("rating"))
                 })
-            chunked_insert(db, Comment, data)
+            chunked_insert(SessionLocal, Comment, data)
 
         # 英文註解: Import ViewHistory
         path = os.path.join(csv_dir, "view_history.csv")
@@ -226,7 +273,7 @@ def main():
                     "view_duration": to_int(r.get("view_duration")) or 0,
                     "view_type": r.get("view_type", "detail")
                 })
-            chunked_insert(db, ViewHistory, data)
+            chunked_insert(SessionLocal, ViewHistory, data)
 
         # 英文註解: Import UserProfiles
         path = os.path.join(csv_dir, "user_profiles.csv")
@@ -256,7 +303,7 @@ def main():
                     "profile_setup_completed": to_bool(r.get("profile_setup_completed")),
                     "setup_skipped": to_bool(r.get("setup_skipped"))
                 })
-            chunked_insert(db, UserProfile, data)
+            chunked_insert(SessionLocal, UserProfile, data)
 
         # 英文註解: Update PostgreSQL auto-increment sequences so new inserts don't fail
         print("Updating PostgreSQL sequences...")
