@@ -308,44 +308,49 @@ async def get_movies(
     sort_by: str = "rating",
     db: Session = Depends(get_db)
 ):
-    query = db.query(Movie)
-    
-    if search:
-        q = f"%{search.strip()}%"
-        query = query.filter(
-            or_(
-                Movie.title.ilike(q),
-                Movie.director.ilike(q),
-                Movie.cast.ilike(q),
+    try:
+        query = db.query(Movie)
+        
+        if search:
+            q = f"%{search.strip()}%"
+            query = query.filter(
+                or_(
+                    Movie.title.ilike(q),
+                    Movie.director.ilike(q),
+                    Movie.cast.ilike(q),
+                )
             )
-        )
-    
-    if genre:
-        query = query.join(Movie.genres).filter(Genre.name == genre)
+        
+        if genre:
+            query = query.join(Movie.genres).filter(Genre.name == genre)
 
-    if year:
-        query = query.filter(Movie.year == year)
+        if year:
+            query = query.filter(Movie.year == year)
 
-    if min_rating is not None:
-        query = query.filter(Movie.average_rating >= min_rating)
+        if min_rating is not None:
+            query = query.filter(Movie.average_rating >= min_rating)
 
-    if runtime_min is not None:
-        query = query.filter(Movie.runtime >= runtime_min)
+        if runtime_min is not None:
+            query = query.filter(Movie.runtime >= runtime_min)
 
-    if runtime_max is not None:
-        query = query.filter(Movie.runtime <= runtime_max)
+        if runtime_max is not None:
+            query = query.filter(Movie.runtime <= runtime_max)
 
-    if sort_by == "popularity":
-        query = query.order_by(Movie.view_count.desc().nullslast(), Movie.rating_count.desc().nullslast())
-    elif sort_by == "year":
-        query = query.order_by(Movie.year.desc().nullslast(), Movie.average_rating.desc().nullslast())
-    elif sort_by == "title":
-        query = query.order_by(Movie.title.asc())
-    else:
-        query = query.order_by(Movie.average_rating.desc().nullslast(), Movie.rating_count.desc().nullslast())
-    
-    movies = query.offset(skip).limit(limit).all()
-    return movies
+        if sort_by == "popularity":
+            query = query.order_by(Movie.view_count.desc().nullslast(), Movie.rating_count.desc().nullslast())
+        elif sort_by == "year":
+            query = query.order_by(Movie.year.desc().nullslast(), Movie.average_rating.desc().nullslast())
+        elif sort_by == "title":
+            query = query.order_by(Movie.title.asc())
+        else:
+            query = query.order_by(Movie.average_rating.desc().nullslast(), Movie.rating_count.desc().nullslast())
+        
+        movies = query.offset(skip).limit(limit).all()
+        return movies
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @app.get("/api/movies/count")
@@ -504,23 +509,31 @@ async def create_rating(
             )
             db.add(db_rating)
         
-        db.commit()
+        commit_with_retry(db)
         
         # 使用統一的統計更新器
         from services.statistics_updater import statistics_updater
         
         # 更新電影統計
-        statistics_updater.update_movie_statistics(db, movie.id)
-        
+        try:
+            statistics_updater.update_movie_statistics(db, movie.id)
+        except Exception as e:
+            print(f"Failed to update movie statistics: {e}")
+            
         # 更新用戶統計
-        statistics_updater.update_user_statistics(db, current_user.id)
+        try:
+            statistics_updater.update_user_statistics(db, current_user.id)
+        except Exception as e:
+            print(f"Failed to update user statistics: {e}")
         
-        # 清除相關緩存
-                
         return {"message": "Rating created successfully", "rating": rating_data.rating}
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error creating rating: {str(e)}")
 
 @app.get("/api/ratings/{movie_id}")
