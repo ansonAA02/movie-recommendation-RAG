@@ -136,6 +136,26 @@ async def lifespan(app: FastAPI):
     print("Recommendation system initialized")
     print("Database connection established")
     print("Cache service started")
+    
+    try:
+        from database import engine
+        from sqlalchemy import text
+        
+        # 英文註解: Only fix sequences if using PostgreSQL
+        if "postgres" in str(engine.url):
+            with engine.connect() as conn:
+                print("Checking and fixing PostgreSQL sequences...")
+                tables = ["users", "movies", "ratings", "genres", "movie_genres", "view_history", "favorites", "likes", "comments", "user_profiles"]
+                for table in tables:
+                    try:
+                        conn.execute(text(f"SELECT setval('{table}_id_seq', COALESCE((SELECT MAX(id) FROM {table}), 1), false);"))
+                        conn.commit()
+                    except Exception as seq_e:
+                        pass
+                print("PostgreSQL sequences fixed successfully.")
+    except Exception as e:
+        print(f"Error during startup sequence fix: {e}")
+        
     yield
     # 关闭时清理资源
     print("System shutting down...")
