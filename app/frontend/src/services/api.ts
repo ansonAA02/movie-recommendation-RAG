@@ -4,7 +4,17 @@ import toast from 'react-hot-toast'
 // English comment: Resolve the API base URL from Vite env for production deployments.
 const resolveApiBaseUrl = () => {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
-  return configuredBaseUrl || 'http://localhost:8000/api'
+  if (configuredBaseUrl) return configuredBaseUrl
+  
+  // If no env variable is set, check if we are in production
+  if (import.meta.env.PROD) {
+    // If served by Nginx (Dockerfile deployment), we can use relative path to hit Nginx proxy
+    // If served by Vercel or Railway (Nixpacks), the backend MUST be provided via VITE_API_BASE_URL
+    // But as a fallback, let's use a relative path so it hits the same domain (e.g., Vercel rewrites)
+    return '/api'
+  }
+  
+  return 'http://localhost:8000/api'
 }
 
 // 创建axios实例
