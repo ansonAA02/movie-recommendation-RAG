@@ -147,11 +147,19 @@ def _ensure_loaded():
     global _gnn_embs, _gnn_movie_ids, _gnn_id_to_idx, _fusion_weights
 
     if _embs is None:
-        _embs = np.load(EMB_PATH).astype("float32")
+        if os.path.exists(EMB_PATH):
+            _embs = np.load(EMB_PATH).astype("float32")
+        else:
+            logger.warning(f"Embedding file not found: {EMB_PATH}. Fallback to dummy embeddings.")
+            _embs = np.zeros((1, 1536), dtype="float32")
 
     if _id_map is None:
-        with open(ID_MAP_PATH, "r", encoding="utf-8") as f:
-            _id_map = _normalize_id_map(json.load(f))
+        if os.path.exists(ID_MAP_PATH):
+            with open(ID_MAP_PATH, "r", encoding="utf-8") as f:
+                _id_map = _normalize_id_map(json.load(f))
+        else:
+            logger.warning(f"ID map file not found: {ID_MAP_PATH}. Fallback to empty map.")
+            _id_map = {"id_to_idx": {}, "idx_to_id": {}}
 
     if _index is None:
         if os.path.exists(FAISS_INDEX_PATH):
