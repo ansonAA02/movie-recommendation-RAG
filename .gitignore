@@ -18,6 +18,9 @@ env/
 /data/**
 !/data/.gitkeep
 
+# English comment: Keep the local SQLite database out of version control.
+app/backend/*.db
+
 # App data (if used)
 /app/data/**
 !/app/data/.gitkeep

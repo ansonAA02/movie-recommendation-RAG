@@ -9,7 +9,7 @@ import { useAuthStore } from '../stores/authStore'
 import toast from 'react-hot-toast'
 
 const Likes = () => {
-  const { refreshUserProfile } = useAuthStore()
+  const refreshUserProfile = useAuthStore((state) => state.refreshUserProfile)
   const navigate = useNavigate()
   const [likes, setLikes] = useState<Movie[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -32,12 +32,13 @@ const Likes = () => {
     }
   }
 
+  // English comment: Remove the like immediately and let profile totals catch up in the background.
   const handleRemoveLike = async (movieId: number) => {
     try {
       await movieApi.toggleLike(movieId)
       setLikes(prev => prev.filter(movie => movie.id !== movieId))
       toast.success('Removed from likes')
-      await refreshUserProfile()
+      void refreshUserProfile()
     } catch {
       toast.error('Failed to remove like')
     }

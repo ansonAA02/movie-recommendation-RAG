@@ -4,6 +4,7 @@ sqlalchemy
 neo4j
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt<5
 pydantic
 email-validator
 python-dotenv

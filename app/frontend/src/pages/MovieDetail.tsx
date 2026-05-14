@@ -28,7 +28,8 @@ import toast from 'react-hot-toast'
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user, refreshUserProfile } = useAuthStore()
+  const user = useAuthStore((state) => state.user)
+  const refreshUserProfile = useAuthStore((state) => state.refreshUserProfile)
   const [movie, setMovie] = useState<Movie | null>(null)
   const [userRating, setUserRating] = useState(0)
   const [isFavorite, setIsFavorite] = useState(false)
@@ -57,6 +58,11 @@ const MovieDetail = () => {
       recordViewHistory()
     }
   }, [movie, user])
+
+  // English comment: Refresh profile stats in the background so the like button stays responsive.
+  const refreshUserProfileInBackground = () => {
+    void refreshUserProfile()
+  }
 
   const loadMovieDetail = async () => {
     try {
@@ -136,17 +142,27 @@ const MovieDetail = () => {
     }
   }
 
+  // English comment: Optimistically update favorite UI before the slower profile refresh finishes.
   const handleToggleFavorite = async () => {
     if (!movie || !user || favoriteLoading) return
     
     try {
       setFavoriteLoading(true)
+      const nextFavoriteState = !isFavorite
       await movieApi.toggleFavorite(movie.id)
-      setIsFavorite(!isFavorite)
+      setIsFavorite(nextFavoriteState)
+      setMovie((prev) => (
+        prev
+          ? {
+              ...prev,
+              favorite_count: Math.max(0, (prev.favorite_count || 0) + (nextFavoriteState ? 1 : -1)),
+            }
+          : prev
+      ))
       toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites')
       
-      // 只刷新用戶資料，電影統計會在下次載入時更新
-      await refreshUserProfile()
+      // 只在背景刷新用戶資料，避免阻塞按鈕回饋。
+      refreshUserProfileInBackground()
     } catch (error) {
       console.error('Favorite operation failed:', error)
       toast.error('Operation failed, please try again')
@@ -155,17 +171,27 @@ const MovieDetail = () => {
     }
   }
 
+  // English comment: Optimistically update like UI before the slower profile refresh finishes.
   const handleToggleLike = async () => {
     if (!movie || !user || likeLoading) return
     
     try {
       setLikeLoading(true)
-      await movieApi.toggleLike(movie.id)
-      setIsLiked(!isLiked)
+      const nextLikeState = !isLiked
+      const response = await movieApi.toggleLike(movie.id)
+      setIsLiked(nextLikeState)
+      setMovie((prev) => (
+        prev
+          ? {
+              ...prev,
+              like_count: response?.like_count ?? Math.max(0, (prev.like_count || 0) + (nextLikeState ? 1 : -1)),
+            }
+          : prev
+      ))
       toast.success(isLiked ? 'Like removed' : 'Liked')
       
-      // 只刷新用戶資料，電影統計會在下次載入時更新
-      await refreshUserProfile()
+      // 只在背景刷新用戶資料，避免阻塞按鈕回饋。
+      refreshUserProfileInBackground()
     } catch (error) {
       console.error('Like operation failed:', error)
       toast.error('Operation failed, please try again')

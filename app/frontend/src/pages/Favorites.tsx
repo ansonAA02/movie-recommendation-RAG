@@ -9,7 +9,7 @@ import { useAuthStore } from '../stores/authStore'
 import toast from 'react-hot-toast'
 
 const Favorites = () => {
-  const { refreshUserProfile } = useAuthStore()
+  const refreshUserProfile = useAuthStore((state) => state.refreshUserProfile)
   const navigate = useNavigate()
   const [favorites, setFavorites] = useState<Movie[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -32,13 +32,14 @@ const Favorites = () => {
     }
   }
 
+  // English comment: Remove the favorite immediately and let profile totals catch up in the background.
   const handleRemoveFavorite = async (movieId: number) => {
     try {
       await movieApi.toggleFavorite(movieId)
       setFavorites(prev => prev.filter(movie => movie.id !== movieId))
       toast.success('Removed from favorites')
-      // 刷新用戶資料以更新統計數據
-      await refreshUserProfile()
+      // English comment: Keep the interaction snappy by not blocking on profile recomputation.
+      void refreshUserProfile()
     } catch (error) {
       toast.error('Failed to remove from favorites')
     }
