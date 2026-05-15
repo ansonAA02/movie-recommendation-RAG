@@ -64,16 +64,16 @@ const MovieDetail = () => {
     void refreshUserProfile()
   }
 
-  const loadMovieDetail = async () => {
+  const loadMovieDetail = async (silent: boolean = false) => {
     try {
       console.log('Loading movie detail for ID:', id)
-      setLoading(true)
+      if (!silent) setLoading(true)
       
       // 首先加載電影基本信息
       const movieData = await movieApi.getMovie(parseInt(id!))
       console.log('Movie data loaded:', movieData)
       setMovie(movieData)
-      setLoading(false) // 立即設置加載完成，讓用戶看到電影信息
+      if (!silent) setLoading(false) // 立即設置加載完成，讓用戶看到電影信息
       
       // 然後並行加載其他信息
       const loadAdditionalData = async () => {
@@ -126,7 +126,7 @@ const MovieDetail = () => {
       
       // 延遲重新載入電影數據以更新平均評分
       setTimeout(() => {
-        loadMovieDetail()
+        loadMovieDetail(true)
       }, 500)
       
       // 延遲刷新用戶資料以更新統計數據
